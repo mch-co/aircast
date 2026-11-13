@@ -42,7 +42,8 @@ else
 fi
 
 step "Building and installing the package"
-"$SOURCE/bin/install" --noconfirm
+# Quiet make: the compiler lines are noise unless something fails.
+MAKEFLAGS=-s "$SOURCE/bin/install" --noconfirm
 
 step "Starting network discovery and Bluetooth"
 sudo systemctl enable --now avahi-daemon bluetooth
@@ -53,9 +54,16 @@ if ! command -v ufw >/dev/null; then
 elif sudo grep -qs 'allow tcp 7000,7100' /etc/ufw/user.rules; then
   note "The AirPlay ports are already open."
 elif ask "Open the AirPlay ports in ufw (TCP 7000, 7100 and UDP 5353, 6000, 6001, 7011)?"; then
-  sudo ufw allow 7000,7100/tcp comment AirCast
-  sudo ufw allow 6000,6001,7011/udp comment AirCast
-  sudo ufw allow 5353/udp comment AirCast
+  # ufw saves a rule before applying it, and applying fails when its service
+  # is stopped. That must not end the install: the rules load when ufw starts.
+  applied=1
+  sudo ufw allow 7000,7100/tcp comment AirCast || applied=0
+  sudo ufw allow 6000,6001,7011/udp comment AirCast || applied=0
+  sudo ufw allow 5353/udp comment AirCast || applied=0
+  if ((!applied)); then
+    note "ufw saved the rules but could not apply them now."
+    systemctl is-active --quiet ufw || note "Its service is stopped, so nothing is blocked; the rules load with: sudo systemctl start ufw"
+  fi
 else
   note "Skipped. AirCast will offer it again on first launch."
 fi
