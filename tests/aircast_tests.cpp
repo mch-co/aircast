@@ -1,4 +1,5 @@
 #include <QProcess>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QVideoSink>
@@ -65,6 +66,32 @@ private slots:
         }
         QTRY_VERIFY2_WITH_TIMEOUT(frames > 5, qPrintable(backend.error()), 10000);
         QCOMPARE(backend.videoSize(), QSize(390, 844));
+    }
+
+    void asksOnceAboutTheFirewall()
+    {
+        QSettings("aircast", "aircast").clear();
+        QTemporaryDir dir;
+        const QString rules = dir.filePath("user.rules"), elevate = dir.filePath("elevate");
+        QFile script(elevate);
+        QVERIFY(script.open(QIODevice::WriteOnly));
+        // Stands in for pkexec: records the command where ufw would write its rules.
+        script.write("#!/bin/sh\necho \"$3\" | sed 's|ufw allow \\([0-9,]*\\)/tcp|allow tcp \\1|' > '" + rules.toUtf8() + "'\n");
+        script.close();
+        QFile::setPermissions(elevate, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+
+        Backend backend(nullptr, rules, elevate);
+        QCOMPARE(backend.firewall(), QString("ask"));
+        backend.declineFirewall();
+        QCOMPARE(backend.firewall(), QString("declined"));
+        backend.allowFirewall();
+        QTRY_COMPARE(backend.firewall(), QString("allowed"));
+        QFile written(rules);
+        QVERIFY(written.open(QIODevice::ReadOnly));
+        const QByteArray command = written.readAll();
+        QVERIFY2(command.contains("allow tcp 7000,7100 comment AirCast"), command.constData());
+        QVERIFY(command.contains("ufw allow 6000,6001,7011/udp") && command.contains("ufw allow 5353/udp"));
+        QSettings("aircast", "aircast").clear();
     }
 
     void blocksIdleWhileAsked()

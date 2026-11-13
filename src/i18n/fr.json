@@ -35,5 +35,14 @@
   "Could not open a network port for AirPlay.": "Impossible d'ouvrir un port réseau pour AirPlay.",
   "Collapse the panel": "Replier le panneau",
   "Expand the panel": "Déplier le panneau",
-  "Could not announce this computer on the network. Is another AirPlay receiver already running here, or is avahi-daemon stopped?": "Impossible d'annoncer ce PC sur le réseau. Un autre récepteur AirPlay tourne-t-il déjà ici, ou avahi-daemon est-il arrêté ?"
+  "Could not announce this computer on the network. Is another AirPlay receiver already running here, or is avahi-daemon stopped?": "Impossible d'annoncer ce PC sur le réseau. Un autre récepteur AirPlay tourne-t-il déjà ici, ou avahi-daemon est-il arrêté ?",
+  "Allow AirPlay through the firewall?": "Autoriser AirPlay dans le pare-feu ?",
+  "Apple devices can't reach this computer while the firewall blocks AirPlay. This opens %1 with ufw; your password will be asked.": "Les appareils Apple ne peuvent pas joindre ce PC tant que le pare-feu bloque AirPlay. Ceci ouvre %1 avec ufw ; votre mot de passe sera demandé.",
+  "TCP %1 and UDP %2, %3": "TCP %1 et UDP %2, %3",
+  "Waiting…": "En attente…",
+  "Allow": "Autoriser",
+  "Not now": "Plus tard",
+  "Allow AirPlay through the firewall…": "Autoriser AirPlay dans le pare-feu…",
+  "The firewall was not changed: %1": "Le pare-feu n'a pas été modifié : %1",
+  "The firewall was not changed (exit code %1).": "Le pare-feu n'a pas été modifié (code %1)."
 }

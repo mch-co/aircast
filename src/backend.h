@@ -3,6 +3,7 @@
 #include <QMutex>
 #include <QObject>
 #include <QPointer>
+#include <QProcess>
 #include <QDBusUnixFileDescriptor>
 #include <QSize>
 #include <QTimer>
@@ -30,10 +31,15 @@ class Backend : public QObject {
     Q_PROPERTY(int fps READ fps NOTIFY changed)
     Q_PROPERTY(QSize videoSize READ videoSize NOTIFY changed)
     Q_PROPERTY(QString error READ error NOTIFY changed)
+    Q_PROPERTY(QString firewall READ firewall NOTIFY changed) // none, ask, working, declined, allowed
+    Q_PROPERTY(QString firewallPorts READ firewallPorts CONSTANT)
     Q_PROPERTY(QVideoSink *videoSink READ videoSink WRITE setVideoSink NOTIFY changed)
 
 public:
-    explicit Backend(QObject *parent = nullptr);
+    // The rules file and the elevation command are arguments so tests can
+    // run without touching the real firewall.
+    explicit Backend(QObject *parent = nullptr, const QString &firewallRules = "/etc/ufw/user.rules",
+                     const QString &elevate = "pkexec");
     ~Backend() override;
 
     bool visible() const { return m_raop != nullptr; }
@@ -48,6 +54,13 @@ public:
     QString error() const { return m_error; }
     QVideoSink *videoSink() const { return m_sink; }
     void setVideoSink(QVideoSink *sink);
+
+    // AirPlay listens on fixed ports so one firewall rule covers it. The
+    // user decides on first launch; the rule is added through polkit.
+    QString firewall() const;
+    QString firewallPorts() const;
+    Q_INVOKABLE void allowFirewall();
+    Q_INVOKABLE void declineFirewall();
 
     // Drops whoever is connected (or pairing) and keeps listening.
     Q_INVOKABLE void disconnectClient();
@@ -89,6 +102,8 @@ private:
     QSize m_videoSize;
     QPointer<QVideoSink> m_sink;
     QTimer m_tick, m_pairingTimeout;
+    QString m_firewallRules, m_elevate;
+    QProcess m_firewallProcess;
     QDBusUnixFileDescriptor m_idleLock;
 
     raop_s *m_raop = nullptr;

@@ -6,6 +6,7 @@ arch=('x86_64' 'aarch64')
 license=('GPL-3.0-or-later')
 depends=('qt6-base' 'qt6-declarative' 'qt6-multimedia' 'qt6-wayland' 'gstreamer' 'gst-plugins-base'
          'gst-plugins-good' 'gst-plugins-bad' 'gst-libav' 'avahi' 'libplist' 'openssl')
+optdepends=('ufw: offer to open the AirPlay ports on first launch' 'polkit: ask for the password to change the firewall')
 makedepends=('gcc' 'make')
 source=()
 sha256sums=()

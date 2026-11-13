@@ -18,6 +18,9 @@ is mirroring.
 | ? | Help |
 | Q | Quit |
 
+On first launch AirCast offers to open its ports in `ufw` (TCP 7000, 7100 and
+UDP 5353, 6000, 6001, 7011); the choice is yours and is asked once.
+
 Build with `bin/build`, test with `bin/test`, install with `bin/install`.
 
 ## Credits and license

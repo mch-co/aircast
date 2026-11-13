@@ -322,6 +322,45 @@ ApplicationWindow {
                     text: backend.error
                 }
 
+                // First launch: the user decides about the firewall.
+                Card {
+                    Layout.fillWidth: true
+                    visible: backend.firewall === "ask" || backend.firewall === "working"
+                    implicitHeight: firewall.implicitHeight + 24
+                    border.width: 1
+                    border.color: Qt.alpha(theme.accent, .45)
+                    ColumnLayout {
+                        id: firewall
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+                        spacing: 8
+                        Label { Layout.fillWidth: true; wrapMode: Text.WordWrap; text: qsTr("Allow AirPlay through the firewall?"); font.pixelSize: 13; font.weight: Font.DemiBold; color: win.ink }
+                        Label {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 12
+                            lineHeight: 1.3
+                            color: win.dim(.75)
+                            text: qsTr("Apple devices can't reach this computer while the firewall blocks AirPlay. This opens %1 with ufw; your password will be asked.").arg(backend.firewallPorts)
+                        }
+                        RowLayout {
+                            spacing: 6
+                            FlatButton {
+                                Layout.fillWidth: true; Layout.preferredWidth: 1
+                                enabled: backend.firewall === "ask"
+                                base: "#eef1f8"; ink: "#10121f"
+                                text: backend.firewall === "working" ? qsTr("Waiting…") : qsTr("Allow")
+                                onClicked: backend.allowFirewall()
+                            }
+                            FlatButton {
+                                Layout.fillWidth: true; Layout.preferredWidth: 1
+                                enabled: backend.firewall === "ask"
+                                text: qsTr("Not now")
+                                onClicked: backend.declineFirewall()
+                            }
+                        }
+                    }
+                }
+
                 // Idle: how to connect.
                 Item {
                     Layout.fillWidth: true
@@ -347,6 +386,14 @@ ApplicationWindow {
                             ? qsTr("Waiting. On the iPhone, open Control Center, tap Screen Mirroring, then choose “%1”.").arg(backend.name)
                             : qsTr("Turn visibility on so Apple devices can see this computer.")
                     }
+                }
+
+                FlatButton {
+                    Layout.fillWidth: true
+                    visible: win.expanded && backend.firewall === "declined" && backend.phase === "idle"
+                    base: "transparent"; ink: win.dim(.6)
+                    text: qsTr("Allow AirPlay through the firewall…")
+                    onClicked: backend.allowFirewall()
                 }
 
                 // Pairing: the code to type on the phone.

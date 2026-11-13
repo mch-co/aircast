@@ -5,10 +5,12 @@
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QDir>
+#include <QFile>
 #include <QGuiApplication>
 #include <QNetworkInterface>
 #include <QRandomGenerator>
 #include <QScreen>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QSysInfo>
 #include <QVideoFrameFormat>
@@ -32,6 +34,10 @@ namespace {
 // The audio renderer keeps these pointers; unsynchronised playback is what
 // keeps screen mirroring low-latency.
 const bool kAudioSync = false, kVideoSync = false;
+// UxPlay's conventional ports: mirror data and the server over TCP; timing,
+// control and audio data over UDP. 5353 is mDNS, how phones find us.
+const char kTcpPorts[] = "7000,7100", kUdpPorts[] = "6000,6001,7011", kMdnsPort[] = "5353";
+const unsigned short kTcp[2] = {7100, 7000}, kUdp[3] = {6000, 6001, 7011};
 const int kFeedbackLimit = 15; // seconds of client silence before we give up
 
 Backend *self(void *cls) { return static_cast<Backend *>(cls); }
@@ -162,7 +168,21 @@ gboolean onBus(GstBus *, GstMessage *message, gpointer cls) {
 
 } // namespace
 
-Backend::Backend(QObject *parent) : QObject(parent), m_name(QSysInfo::machineHostName()) {
+Backend::Backend(QObject *parent, const QString &firewallRules, const QString &elevate)
+    : QObject(parent), m_name(QSysInfo::machineHostName()), m_firewallRules(firewallRules), m_elevate(elevate) {
+    connect(&m_firewallProcess, &QProcess::errorOccurred, this, [this](QProcess::ProcessError e) {
+        if (e == QProcess::FailedToStart)
+            fail(tr("The firewall was not changed: %1").arg(m_firewallProcess.errorString()));
+    });
+    connect(&m_firewallProcess, &QProcess::finished, this, [this](int code) {
+        // pkexec exits 126 when the password dialog is dismissed: still a
+        // decision to make, not an error.
+        if (code == 0)
+            QSettings("aircast", "aircast").setValue("firewall", "allowed");
+        else if (code != 126)
+            m_error = tr("The firewall was not changed (exit code %1).").arg(code);
+        emit changed();
+    });
     if (m_name.isEmpty())
         m_name = "Omarchy";
     m_logger = logger_init();
@@ -285,7 +305,7 @@ bool Backend::start() {
     raop_set_plist(m_raop, "maxFPS", 60);
     raop_set_plist(m_raop, "pin", 0); // a fresh random code for every pairing
 
-    unsigned short tcp[2] = {0, 0}, udp[3] = {0, 0, 0};
+    unsigned short tcp[2] = {kTcp[0], kTcp[1]}, udp[3] = {kUdp[0], kUdp[1], kUdp[2]};
     raop_set_tcp_ports(m_raop, tcp);
     raop_set_udp_ports(m_raop, udp);
     unsigned short port = raop_get_port(m_raop);
@@ -338,6 +358,39 @@ void Backend::disconnectClient() {
         fail(tr("Could not open a network port for AirPlay."));
     else
         raop_set_port(m_raop, port);
+}
+
+QString Backend::firewallPorts() const {
+    return tr("TCP %1 and UDP %2, %3").arg(kTcpPorts, kMdnsPort, kUdpPorts);
+}
+
+QString Backend::firewall() const {
+    if (QStandardPaths::findExecutable("ufw").isEmpty())
+        return "none";
+    if (m_firewallProcess.state() != QProcess::NotRunning)
+        return "working";
+    // The rules file is the truth when it's readable; the saved answer
+    // covers machines where it isn't.
+    QFile rules(m_firewallRules);
+    if (rules.open(QIODevice::ReadOnly) && rules.readAll().contains(QByteArray("allow tcp ") + kTcpPorts))
+        return "allowed";
+    const QString answer = QSettings("aircast", "aircast").value("firewall").toString();
+    return answer == "allowed" || answer == "declined" ? answer : "ask";
+}
+
+void Backend::allowFirewall() {
+    if (m_firewallProcess.state() != QProcess::NotRunning)
+        return;
+    m_error.clear();
+    const QString rule = "ufw allow %1/%2 comment AirCast";
+    m_firewallProcess.start(m_elevate, {"sh", "-c", QStringList{rule.arg(kTcpPorts, "tcp"), rule.arg(kUdpPorts, "udp"),
+                                                               rule.arg(kMdnsPort, "udp")}.join(" && ")});
+    emit changed();
+}
+
+void Backend::declineFirewall() {
+    QSettings("aircast", "aircast").setValue("firewall", "declined");
+    emit changed();
 }
 
 void Backend::setVideoSink(QVideoSink *sink) {
