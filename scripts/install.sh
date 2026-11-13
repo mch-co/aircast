@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Installs AirCast on Arch Linux and sets up what it needs:
+# Installs AirCast on Arch, Ubuntu/Debian or Fedora and sets up what it needs:
 #   curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/install.sh | bash
 # Add "-s -- --yes" after bash to accept every question.
 set -euo pipefail
 
 REPO=https://github.com/mch-co/aircast.git
 SOURCE="${XDG_DATA_HOME:-$HOME/.local/share}/aircast-src"
-PACKAGES=(base-devel git qt6-base qt6-declarative qt6-multimedia qt6-wayland gstreamer
-  gst-plugins-base gst-plugins-good gst-plugins-bad gst-libav avahi libplist openssl
-  bluez bluez-utils)
+# A local checkout to install from instead of cloning, for development.
+LOCAL="${AIRCAST_SOURCE:-}"
+PREFIX=/usr/local
 BLUEZ_CONF=/etc/bluetooth/main.conf
 
 YES=0
@@ -28,34 +28,100 @@ ask() {
   [[ ! "$answer" =~ ^[nN] ]]
 }
 
-command -v pacman >/dev/null || { echo "AirCast is packaged for Arch-based systems only (pacman not found)." >&2; exit 1; }
 ((EUID != 0)) || { echo "Run this as your user, not root: it asks for sudo when needed." >&2; exit 1; }
 
+# The same libraries under each family's package names.
+. /etc/os-release
+case " ${ID:-} ${ID_LIKE:-} " in
+*" arch "*)
+  FAMILY=arch
+  PACKAGES=(base-devel git qt6-base qt6-declarative qt6-multimedia qt6-wayland gstreamer
+    gst-plugins-base gst-plugins-good gst-plugins-bad gst-libav avahi libplist openssl
+    bluez bluez-utils)
+  ;;
+*" debian "* | *" ubuntu "*)
+  FAMILY=debian
+  PACKAGES=(build-essential git pkg-config qmake6 qt6-base-dev qt6-declarative-dev
+    qt6-multimedia-dev qt6-wayland qml6-module-qtquick qml6-module-qtquick-controls
+    qml6-module-qtquick-layouts qml6-module-qtquick-shapes qml6-module-qtquick-window
+    qml6-module-qtquick-templates qml6-module-qtqml-workerscript qml6-module-qtmultimedia
+    libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-base
+    gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
+    libavahi-compat-libdnssd-dev avahi-daemon libplist-dev libssl-dev bluez)
+  ;;
+*" fedora "* | *" rhel "*)
+  FAMILY=fedora
+  PACKAGES=(gcc-c++ make git pkgconf-pkg-config qt6-qtbase-devel qt6-qtdeclarative-devel
+    qt6-qtmultimedia-devel qt6-qtwayland gstreamer1-devel gstreamer1-plugins-base-devel
+    gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugin-libav
+    gstreamer1-plugin-openh264 mozilla-openh264
+    avahi avahi-compat-libdns_sd-devel libplist-devel openssl-devel bluez)
+  ;;
+*)
+  echo "AirCast's installer knows Arch, Ubuntu/Debian and Fedora; this is ${PRETTY_NAME:-another system}." >&2
+  echo "Install the libraries listed in the README, then run bin/build." >&2
+  exit 1
+  ;;
+esac
+
 step "Installing dependencies"
-sudo pacman -S --needed --noconfirm "${PACKAGES[@]}"
+case $FAMILY in
+arch) sudo pacman -S --needed --noconfirm "${PACKAGES[@]}" ;;
+debian) sudo apt-get update && sudo apt-get install -y "${PACKAGES[@]}" ;;
+fedora) sudo dnf install -y "${PACKAGES[@]}" ;;
+esac
 
 step "Getting AirCast"
-if [[ -d "$SOURCE/.git" ]]; then
+if [[ -n "$LOCAL" ]]; then
+  SOURCE="$LOCAL"
+  note "Using the checkout in $SOURCE"
+elif [[ -d "$SOURCE/.git" ]]; then
   git -C "$SOURCE" pull --ff-only
 else
   git clone --depth 1 "$REPO" "$SOURCE"
 fi
 
-step "Building and installing the package"
-"$SOURCE/bin/install" --noconfirm
+step "Building and installing"
+# Quiet make: the compiler lines are noise unless something fails.
+if [[ $FAMILY == arch ]]; then
+  MAKEFLAGS=-s "$SOURCE/bin/install" --noconfirm
+else
+  # No native package yet outside Arch: the same three files go under $PREFIX.
+  MAKEFLAGS=-s "$SOURCE/bin/build"
+  sudo install -Dm755 "$SOURCE/build/aircast" "$PREFIX/bin/aircast"
+  sudo install -Dm644 "$SOURCE/pkgbuild/aircast.desktop" "$PREFIX/share/applications/aircast.desktop"
+  sudo install -Dm644 "$SOURCE/pkgbuild/aircast.svg" "$PREFIX/share/icons/hicolor/scalable/apps/aircast.svg"
+  sudo update-desktop-database "$PREFIX/share/applications" 2>/dev/null || true
+fi
 
 step "Starting network discovery and Bluetooth"
 sudo systemctl enable --now avahi-daemon bluetooth
 
 step "Firewall"
-if ! command -v ufw >/dev/null; then
-  note "ufw is not installed: nothing to open."
+if command -v firewall-cmd >/dev/null && sudo firewall-cmd --state >/dev/null 2>&1; then
+  if sudo firewall-cmd --query-port=7000/tcp >/dev/null 2>&1; then
+    note "The AirPlay ports are already open."
+  elif ask "Open the AirPlay ports in firewalld (TCP 7000, 7100 and UDP 5353, 6000, 6001, 7011)?"; then
+    sudo firewall-cmd --permanent --add-port={7000,7100}/tcp --add-port={5353,6000,6001,7011}/udp
+    sudo firewall-cmd --reload
+  else
+    note "Skipped. Apple devices won't find this computer until the ports are open."
+  fi
+elif ! command -v ufw >/dev/null; then
+  note "No ufw or running firewalld: nothing to open."
 elif sudo grep -qs 'allow tcp 7000,7100' /etc/ufw/user.rules; then
   note "The AirPlay ports are already open."
 elif ask "Open the AirPlay ports in ufw (TCP 7000, 7100 and UDP 5353, 6000, 6001, 7011)?"; then
-  sudo ufw allow 7000,7100/tcp comment AirCast
-  sudo ufw allow 6000,6001,7011/udp comment AirCast
-  sudo ufw allow 5353/udp comment AirCast
+  # ufw saves a rule before applying it, and applying fails when its service
+  # is stopped. That must not end the install: the rules load when ufw starts.
+  applied=1
+  sudo ufw allow 7000,7100/tcp comment AirCast || applied=0
+  sudo ufw allow 6000,6001,7011/udp comment AirCast || applied=0
+  sudo ufw allow 5353/udp comment AirCast || applied=0
+  if ((!applied)); then
+    note "ufw saved the rules but could not apply them now."
+    systemctl is-active --quiet ufw || note "Its service is stopped, so nothing is blocked; the rules load with: sudo systemctl start ufw"
+  fi
 else
   note "Skipped. AirCast will offer it again on first launch."
 fi

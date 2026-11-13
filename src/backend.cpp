@@ -156,6 +156,19 @@ GstFlowReturn onSample(GstAppSink *sink, gpointer cls) {
     return GST_FLOW_OK;
 }
 
+// Whether GStreamer has anything installed that decodes this format. Some
+// distributions ship without H.264 or H.265 decoders for patent reasons.
+bool canDecode(const char *mediaType) {
+    GList *decoders = gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_DECODER, GST_RANK_MARGINAL);
+    GstCaps *caps = gst_caps_new_empty_simple(mediaType);
+    GList *matching = gst_element_factory_list_filter(decoders, caps, GST_PAD_SINK, FALSE);
+    const bool found = matching != nullptr;
+    gst_plugin_feature_list_free(matching);
+    gst_plugin_feature_list_free(decoders);
+    gst_caps_unref(caps);
+    return found;
+}
+
 gboolean onBus(GstBus *, GstMessage *message, gpointer cls) {
     if (GST_MESSAGE_TYPE(message) == GST_MESSAGE_ERROR) {
         GError *error = nullptr;
@@ -224,6 +237,8 @@ void Backend::setVisible(bool visible) {
         m_error.clear();
         if (!start())
             stop();
+        else if (!canDecode("video/x-h264"))
+            m_error = tr("No H.264 video decoder is installed, so mirroring would stay black. Install gst-libav, or gstreamer1-plugin-openh264 on Fedora.");
     } else {
         stop();
     }
@@ -241,12 +256,13 @@ bool Backend::start() {
         return false;
     }
     // UxPlay's feature bits 0-31: mirroring, audio and FairPlay, without
-    // HLS video or legacy pairing; bit 42 adds H.265 for 4K sources.
+    // HLS video or legacy pairing; bit 42 offers H.265 for 4K sources, when
+    // this machine can decode it.
     static const char features[] = "01100111011111111111111001011010";
     for (int bit = 0; bit < 32; ++bit)
         dnssd_set_airplay_features(m_dnssd, bit, features[bit] - '0');
     dnssd_set_airplay_features(m_dnssd, 27, 0);
-    dnssd_set_airplay_features(m_dnssd, 42, 1);
+    dnssd_set_airplay_features(m_dnssd, 42, canDecode("video/x-h265"));
 
     raop_callbacks_t callbacks;
     std::memset(&callbacks, 0, sizeof(callbacks));

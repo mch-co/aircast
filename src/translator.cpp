@@ -21,12 +21,12 @@ Translator::Translator(const QString &languageFile, const QString &catalogDirect
     reload();
 }
 
-// One registry code on the first line; anything else, or no file, is English.
+// One registry code on the first line. Without Omarchy's file, the system
+// language is the one to follow; anything unreadable is English.
 QString Translator::readLanguage(const QString &path) {
     QFile file(path);
-    if (!file.open(QIODevice::ReadOnly))
-        return "en";
-    const QString code = QString::fromUtf8(file.readLine()).trimmed();
+    const QString code = file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readLine()).trimmed()
+                                                        : QLocale::system().bcp47Name();
     static const QRegularExpression valid("^[a-z]{2,3}(-[A-Za-z]{2})?$");
     return valid.match(code).hasMatch() ? code : "en";
 }
