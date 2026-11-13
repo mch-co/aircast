@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
-import QtQuick.Effects
 import QtQuick.Shapes
 import QtMultimedia
 
@@ -35,6 +34,14 @@ ApplicationWindow {
     function clock(seconds) {
         const pad = n => String(n).padStart(2, "0")
         return pad(Math.floor(seconds / 60)) + ":" + pad(seconds % 60)
+    }
+    readonly property color accent: theme.accent
+    function fade(color, alpha) { return Qt.rgba(color.r, color.g, color.b, alpha) }
+    // A rounded rectangle as an SVG path, for Qt versions without PathRectangle.
+    function roundedPath(w, h, r) {
+        const arc = " A" + r + "," + r + " 0 0 1 "
+        return "M" + r + ",0 H" + (w - r) + arc + w + "," + r + " V" + (h - r) + arc + (w - r) + "," + h
+            + " H" + r + arc + "0," + (h - r) + " V" + r + arc + r + ",0 Z"
     }
     function toggleFull() { win.visibility = win.full ? Window.Windowed : Window.FullScreen }
 
@@ -192,15 +199,20 @@ ApplicationWindow {
                         anchors.fill: parent
                         fillMode: VideoOutput.Stretch
                         Component.onCompleted: backend.videoSink = video.videoSink
-                        layer.enabled: screen.corner > 0
-                        layer.effect: MultiEffect { maskEnabled: true; maskSource: screenMask }
                     }
-                    Rectangle {
-                        id: screenMask
+                    // Rounds the picture by painting the stage's colour over
+                    // its corners: no effect module, so it runs on any Qt 6.
+                    Shape {
                         anchors.fill: parent
-                        radius: screen.corner
-                        visible: false
+                        visible: screen.corner > 0
                         layer.enabled: true
+                        layer.samples: 4
+                        ShapePath {
+                            strokeColor: "transparent"
+                            fillColor: "#0f1120"
+                            fillRule: ShapePath.OddEvenFill
+                            PathSvg { path: "M0,0 H" + screen.width + " V" + screen.height + " H0 Z " + win.roundedPath(screen.width, screen.height, screen.corner) }
+                        }
                     }
                 }
                 // The whole stage is the trackpad. Movement is relative, like
@@ -418,7 +430,7 @@ ApplicationWindow {
                     visible: backend.firewall === "ask" || backend.firewall === "working"
                     implicitHeight: firewall.implicitHeight + 24
                     border.width: 1
-                    border.color: Qt.alpha(theme.accent, .45)
+                    border.color: win.fade(win.accent, .45)
                     ColumnLayout {
                         id: firewall
                         anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
@@ -462,7 +474,7 @@ ApplicationWindow {
                         ShapePath {
                             strokeColor: Qt.rgba(1, 1, 1, .16); strokeWidth: 1; fillColor: "transparent"
                             strokeStyle: ShapePath.DashLine; dashPattern: [4, 3]
-                            PathRectangle { x: .5; y: .5; width: dashes.width - 1; height: dashes.height - 1; radius: 10 }
+                            PathSvg { path: win.roundedPath(dashes.width - 1, dashes.height - 1, 10) }
                         }
                     }
                     Label {
@@ -493,7 +505,7 @@ ApplicationWindow {
                     implicitHeight: pairing.implicitHeight + 28
                     color: Qt.rgba(0, 0, 0, .22)
                     border.width: 1
-                    border.color: Qt.alpha(theme.accent, .45)
+                    border.color: win.fade(win.accent, .45)
                     ColumnLayout {
                         id: pairing
                         anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12; topMargin: 14 }

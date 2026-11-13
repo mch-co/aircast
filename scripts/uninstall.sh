@@ -29,10 +29,14 @@ ask() {
 
 step "Removing AirCast"
 pkill -x aircast 2>/dev/null && note "Closed the running AirCast." || true
-if pacman -Qq aircast >/dev/null 2>&1; then
+if command -v pacman >/dev/null && pacman -Qq aircast >/dev/null 2>&1; then
   sudo pacman -R --noconfirm aircast
+elif [[ -e /usr/local/bin/aircast ]]; then
+  # Outside Arch the installer copies three files instead of a package.
+  sudo rm -f /usr/local/bin/aircast /usr/local/share/applications/aircast.desktop \
+    /usr/local/share/icons/hicolor/scalable/apps/aircast.svg
 else
-  note "The package is not installed."
+  note "AirCast is not installed."
 fi
 rm -rf "$SOURCE"
 
@@ -48,7 +52,14 @@ else
 fi
 
 step "Firewall"
-if command -v ufw >/dev/null && sudo grep -qs 'allow tcp 7000,7100' /etc/ufw/user.rules; then
+if command -v firewall-cmd >/dev/null && sudo firewall-cmd --query-port=7000/tcp >/dev/null 2>&1; then
+  if ask "Close the AirPlay ports in firewalld (TCP 7000, 7100 and UDP 5353, 6000, 6001, 7011)?"; then
+    sudo firewall-cmd --permanent --remove-port={7000,7100}/tcp --remove-port={5353,6000,6001,7011}/udp
+    sudo firewall-cmd --reload
+  else
+    note "Left open."
+  fi
+elif command -v ufw >/dev/null && sudo grep -qs 'allow tcp 7000,7100' /etc/ufw/user.rules; then
   if ask "Close the AirPlay ports in ufw (TCP 7000, 7100 and UDP 5353, 6000, 6001, 7011)?"; then
     sudo ufw delete allow 7000,7100/tcp || true
     sudo ufw delete allow 6000,6001,7011/udp || true

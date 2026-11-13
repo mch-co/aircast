@@ -54,5 +54,6 @@
   "Could not reach Bluetooth: %1": "Bluetooth inaccessible : %1",
   "Bluetooth is off or can't act as a mouse and keyboard: %1": "Le Bluetooth est éteint ou ne peut pas servir de souris et clavier : %1",
   "Move the mouse over the picture: your cursor hides and the pointer on the iPhone follows. Move it back here to get your cursor. Ctrl works as ⌘.": "Passez la souris sur l'image : votre curseur se masque et le pointeur de l'iPhone suit. Revenez ici pour retrouver votre curseur. Ctrl fait office de ⌘.",
-  "On the iPhone, open Settings > Bluetooth and choose “AirCast” (it can also show as “%1”). For a pointer, turn on Settings > Accessibility > Touch > AssistiveTouch.": "Sur l'iPhone, ouvrez Réglages > Bluetooth et choisissez « AirCast » (il peut aussi s'afficher sous « %1 »). Pour avoir un pointeur, activez Réglages > Accessibilité > Toucher > AssistiveTouch."
+  "On the iPhone, open Settings > Bluetooth and choose “AirCast” (it can also show as “%1”). For a pointer, turn on Settings > Accessibility > Touch > AssistiveTouch.": "Sur l'iPhone, ouvrez Réglages > Bluetooth et choisissez « AirCast » (il peut aussi s'afficher sous « %1 »). Pour avoir un pointeur, activez Réglages > Accessibilité > Toucher > AssistiveTouch.",
+  "No H.264 video decoder is installed, so mirroring would stay black. Install gst-libav, or gstreamer1-plugin-openh264 on Fedora.": "Aucun décodeur vidéo H.264 n'est installé, donc la recopie resterait noire. Installez gst-libav, ou gstreamer1-plugin-openh264 sous Fedora."
 }

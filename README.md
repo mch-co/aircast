@@ -10,7 +10,7 @@ AirPlay brings the screen and sound to the PC, Bluetooth takes your mouse and ke
 
 **English** · [Français](README.fr.md)
 
-![Arch Linux](https://img.shields.io/badge/Arch%20Linux-Omarchy-101220?logo=archlinux&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-Arch%20%C2%B7%20Ubuntu%20%C2%B7%20Fedora-101220?logo=linux&logoColor=white)
 ![AirPlay](https://img.shields.io/badge/mirroring-AirPlay-5eeaa0?labelColor=101220)
 ![BlueZ](https://img.shields.io/badge/control-Bluetooth%20LE-5eeaa0?labelColor=101220)
 ![Qt Quick](https://img.shields.io/badge/UI-Qt%20Quick-7aa8ff?labelColor=101220)
@@ -61,12 +61,12 @@ No app to install on the phone, and no account: it uses what iOS already has.
 
 ## Requirements
 
-- Arch Linux or an Arch-based system such as Omarchy, on Wayland
+- Arch Linux (Omarchy included), Ubuntu 24.04 or later, Debian 13, or Fedora, on Wayland
 - An iPhone, iPad or Mac on the same Wi-Fi as the PC (no guest network or client isolation)
 - `avahi-daemon` running, so Apple devices can find the PC
 - For control: a Bluetooth LE adapter and **BlueZ**
 
-On Arch Linux:
+The installer below installs everything for you. By hand, on Arch Linux:
 
 ```sh
 sudo pacman -S --needed base-devel git qt6-base qt6-declarative \
@@ -75,7 +75,9 @@ sudo pacman -S --needed base-devel git qt6-base qt6-declarative \
 sudo systemctl enable --now avahi-daemon bluetooth
 ```
 
-Optional: `ufw` and `polkit` for the firewall offer, `ffmpeg` to run the tests. Don't run another AirPlay receiver (UxPlay, for example) at the same time.
+The Ubuntu and Fedora package lists are in [scripts/install.sh](scripts/install.sh). On Fedora, H.264 comes from OpenH264, and H.265 (4K sources) needs a decoder from RPM Fusion.
+
+Optional: `ufw` and `polkit` for the in-app firewall offer (the installer also handles `firewalld`), `ffmpeg` to run the tests. Don't run another AirPlay receiver (UxPlay, for example) at the same time.
 
 ## Install
 
@@ -87,7 +89,7 @@ curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/insta
 
 Add `-s -- --yes` after `bash` to accept every question. Read [the script](scripts/install.sh) first if you prefer; it uses `sudo` for `pacman`, `systemctl`, `ufw` and `/etc/bluetooth/main.conf`.
 
-Or by hand, without the system settings:
+Or by hand on Arch, without the system settings:
 
 ```sh
 git clone https://github.com/mch-co/aircast.git
@@ -95,7 +97,7 @@ cd aircast
 bin/install
 ```
 
-Both build the Arch package and install it with `makepkg -si`: the `aircast` command, an app launcher entry, and the icon.
+On Arch this builds and installs a package with `makepkg -si`; on Ubuntu and Fedora the installer builds AirCast and copies it under `/usr/local`. Either way you get the `aircast` command, an app launcher entry, and the icon.
 
 The latest release is [v0.2.0](https://github.com/mch-co/aircast/releases/tag/v0.2.0).
 
@@ -105,7 +107,7 @@ To uninstall, one command removes AirCast and offers to undo the firewall and Bl
 curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/uninstall.sh | bash
 ```
 
-The packages installed as dependencies are left in place. To remove only the app: `sudo pacman -R aircast`.
+The packages installed as dependencies are left in place. To remove only the app on Arch: `sudo pacman -R aircast`.
 
 ## Usage
 
@@ -207,8 +209,8 @@ A little, as with any screen mirroring over Wi-Fi. It is fine for apps, photos a
 **Can it send my PC's screen to an Apple TV?**
 No. AirCast only receives.
 
-**Does it work on other distributions, macOS or Windows?**
-Only Arch-based Linux is packaged and tested for now. A Mac doesn't need it: macOS has AirPlay receiving and iPhone Mirroring built in.
+**Which systems does it run on?**
+It is used daily on Arch (Omarchy). On Ubuntu 24.04 and Fedora it builds, installs and starts, but mirroring and control haven't been tried on real hardware there yet: reports are welcome. There is no Windows version. A Mac doesn't need it: macOS has AirPlay receiving and iPhone Mirroring built in.
 
 ## Credits and license
 

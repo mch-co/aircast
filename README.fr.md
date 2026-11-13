@@ -10,7 +10,7 @@ AirPlay amène l'écran et le son sur le PC, le Bluetooth renvoie votre souris e
 
 [English](README.md) · **Français**
 
-![Arch Linux](https://img.shields.io/badge/Arch%20Linux-Omarchy-101220?logo=archlinux&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-Arch%20%C2%B7%20Ubuntu%20%C2%B7%20Fedora-101220?logo=linux&logoColor=white)
 ![AirPlay](https://img.shields.io/badge/recopie-AirPlay-5eeaa0?labelColor=101220)
 ![BlueZ](https://img.shields.io/badge/contr%C3%B4le-Bluetooth%20LE-5eeaa0?labelColor=101220)
 ![Qt Quick](https://img.shields.io/badge/UI-Qt%20Quick-7aa8ff?labelColor=101220)
@@ -61,12 +61,12 @@ Aucune application à installer sur le téléphone, aucun compte : tout repose s
 
 ## Prérequis
 
-- Arch Linux ou un système dérivé comme Omarchy, sous Wayland
+- Arch Linux (Omarchy compris), Ubuntu 24.04 ou plus récent, Debian 13 ou Fedora, sous Wayland
 - Un iPhone, iPad ou Mac sur le même Wi-Fi que le PC (sans réseau invité ni isolation des clients)
 - `avahi-daemon` en marche, pour que les appareils Apple trouvent le PC
 - Pour le contrôle : un adaptateur Bluetooth basse consommation et **BlueZ**
 
-Sur Arch Linux :
+L'installateur ci-dessous installe tout pour vous. À la main, sur Arch Linux :
 
 ```sh
 sudo pacman -S --needed base-devel git qt6-base qt6-declarative \
@@ -75,7 +75,9 @@ sudo pacman -S --needed base-devel git qt6-base qt6-declarative \
 sudo systemctl enable --now avahi-daemon bluetooth
 ```
 
-Optionnel : `ufw` et `polkit` pour la proposition pare-feu, `ffmpeg` pour lancer les tests. Ne lancez pas un autre récepteur AirPlay (UxPlay par exemple) en même temps.
+Les listes de paquets pour Ubuntu et Fedora sont dans [scripts/install.sh](scripts/install.sh). Sous Fedora, le H.264 vient d'OpenH264, et le H.265 (sources 4K) demande un décodeur de RPM Fusion.
+
+Optionnel : `ufw` et `polkit` pour la proposition pare-feu dans l'app (l'installateur gère aussi `firewalld`), `ffmpeg` pour lancer les tests. Ne lancez pas un autre récepteur AirPlay (UxPlay par exemple) en même temps.
 
 ## Installation
 
@@ -87,7 +89,7 @@ curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/insta
 
 Ajoutez `-s -- --yes` après `bash` pour tout accepter. Lisez d'abord [le script](scripts/install.sh) si vous préférez ; il utilise `sudo` pour `pacman`, `systemctl`, `ufw` et `/etc/bluetooth/main.conf`.
 
-Ou à la main, sans les réglages système :
+Ou à la main sur Arch, sans les réglages système :
 
 ```sh
 git clone https://github.com/mch-co/aircast.git
@@ -95,7 +97,7 @@ cd aircast
 bin/install
 ```
 
-Les deux compilent le paquet Arch et l'installent avec `makepkg -si` : la commande `aircast`, une entrée dans le lanceur d'applications et l'icône.
+Sur Arch, cela compile et installe un paquet avec `makepkg -si` ; sur Ubuntu et Fedora, l'installateur compile AirCast et le copie dans `/usr/local`. Dans tous les cas vous obtenez la commande `aircast`, une entrée dans le lanceur d'applications et l'icône.
 
 La dernière version est la [v0.2.0](https://github.com/mch-co/aircast/releases/tag/v0.2.0).
 
@@ -105,7 +107,7 @@ Pour désinstaller, une commande retire AirCast et propose d'annuler les réglag
 curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/uninstall.sh | bash
 ```
 
-Les paquets installés comme dépendances restent en place. Pour ne retirer que l'app : `sudo pacman -R aircast`.
+Les paquets installés comme dépendances restent en place. Pour ne retirer que l'app sur Arch : `sudo pacman -R aircast`.
 
 ## Utilisation
 
@@ -207,8 +209,8 @@ Un peu, comme pour toute recopie d'écran en Wi-Fi. C'est sans gêne pour les ap
 **Peut-il envoyer l'écran de mon PC vers une Apple TV ?**
 Non. AirCast ne fait que recevoir.
 
-**Fonctionne-t-il sur d'autres distributions, macOS ou Windows ?**
-Seul Linux basé sur Arch est empaqueté et testé pour l'instant. Un Mac n'en a pas besoin : macOS intègre la réception AirPlay et la recopie de l'iPhone.
+**Sur quels systèmes fonctionne-t-il ?**
+Il est utilisé au quotidien sur Arch (Omarchy). Sur Ubuntu 24.04 et Fedora, il se compile, s'installe et démarre, mais la recopie et le contrôle n'y ont pas encore été essayés sur du vrai matériel : les retours sont bienvenus. Il n'y a pas de version Windows. Un Mac n'en a pas besoin : macOS intègre la réception AirPlay et la recopie de l'iPhone.
 
 ## Crédits et licence
 
