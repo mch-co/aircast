@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=AirCast
+Comment=Mirror an iPhone, iPad or Mac screen over AirPlay
+Comment[fr]=Recopier l'écran d'un iPhone, iPad ou Mac via AirPlay
+Exec=aircast
+Icon=aircast
+Terminal=false
+Categories=AudioVideo;Utility;
+StartupWMClass=aircast
