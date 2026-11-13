@@ -195,32 +195,6 @@ ApplicationWindow {
                         layer.enabled: screen.corner > 0
                         layer.effect: MultiEffect { maskEnabled: true; maskSource: screenMask }
                     }
-                    // The picture is the trackpad: movement is relative, like
-                    // any mouse, so the phone's own pointer is the one to watch.
-                    MouseArea {
-                        id: control
-                        property point last
-                        anchors.fill: parent
-                        enabled: remote.state === "connected"
-                        hoverEnabled: true
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                        cursorShape: enabled ? Qt.CrossCursor : Qt.ArrowCursor
-                        focus: containsMouse
-                        function report(mouse) {
-                            remote.buttons((mouse.buttons & Qt.LeftButton ? 1 : 0) | (mouse.buttons & Qt.RightButton ? 2 : 0) | (mouse.buttons & Qt.MiddleButton ? 4 : 0))
-                        }
-                        onEntered: { last = Qt.point(mouseX, mouseY); forceActiveFocus() }
-                        onExited: remote.releaseAll()
-                        onPositionChanged: mouse => {
-                            remote.move(mouse.x - last.x, mouse.y - last.y)
-                            last = Qt.point(mouse.x, mouse.y)
-                        }
-                        onPressed: mouse => report(mouse)
-                        onReleased: mouse => report(mouse)
-                        onWheel: wheel => remote.scroll(Math.round(wheel.angleDelta.y / 120))
-                        Keys.onPressed: event => { if (!event.isAutoRepeat) remote.key(event.nativeScanCode - 8, true); event.accepted = true }
-                        Keys.onReleased: event => { if (!event.isAutoRepeat) remote.key(event.nativeScanCode - 8, false); event.accepted = true }
-                    }
                     Rectangle {
                         id: screenMask
                         anchors.fill: parent
@@ -228,6 +202,33 @@ ApplicationWindow {
                         visible: false
                         layer.enabled: true
                     }
+                }
+                // The whole stage is the trackpad. Movement is relative, like
+                // any mouse, so the computer's cursor would only mislead: it
+                // is hidden and the phone's own pointer is the one to watch.
+                MouseArea {
+                    id: control
+                    property point last
+                    anchors.fill: parent
+                    enabled: remote.state === "connected"
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                    cursorShape: enabled ? Qt.BlankCursor : Qt.ArrowCursor
+                    focus: containsMouse
+                    function report(mouse) {
+                        remote.buttons((mouse.buttons & Qt.LeftButton ? 1 : 0) | (mouse.buttons & Qt.RightButton ? 2 : 0) | (mouse.buttons & Qt.MiddleButton ? 4 : 0))
+                    }
+                    onEntered: { last = Qt.point(mouseX, mouseY); forceActiveFocus() }
+                    onExited: remote.releaseAll()
+                    onPositionChanged: mouse => {
+                        remote.move(mouse.x - last.x, mouse.y - last.y)
+                        last = Qt.point(mouse.x, mouse.y)
+                    }
+                    onPressed: mouse => report(mouse)
+                    onReleased: mouse => report(mouse)
+                    onWheel: wheel => remote.scroll(Math.round(wheel.angleDelta.y / 120))
+                    Keys.onPressed: event => { if (!event.isAutoRepeat) remote.key(event.nativeScanCode - 8, true); event.accepted = true }
+                    Keys.onReleased: event => { if (!event.isAutoRepeat) remote.key(event.nativeScanCode - 8, false); event.accepted = true }
                 }
             }
 
@@ -382,8 +383,8 @@ ApplicationWindow {
                             font.pixelSize: 12
                             color: win.dim(.75)
                             text: remote.state === "waiting"
-                                ? qsTr("On the iPhone, open Settings > Bluetooth and choose “AirCast”. For a pointer, turn on Settings > Accessibility > Touch > AssistiveTouch.")
-                                : qsTr("Move the mouse over the picture to control the iPhone. Ctrl works as ⌘.")
+                                ? qsTr("On the iPhone, open Settings > Bluetooth and choose “AirCast” (it can also show as “%1”). For a pointer, turn on Settings > Accessibility > Touch > AssistiveTouch.").arg(backend.name)
+                                : qsTr("Move the mouse over the picture: your cursor hides and the pointer on the iPhone follows. Move it back here to get your cursor. Ctrl works as ⌘.")
                         }
                         FlatButton {
                             Layout.fillWidth: true
