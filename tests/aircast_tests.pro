@@ -7,5 +7,5 @@ TEMPLATE = app
 include(../vendor/uxplay.pri)
 INCLUDEPATH += ../src
 
-HEADERS += ../src/backend.h
-SOURCES += aircast_tests.cpp ../src/backend.cpp
+HEADERS += ../src/backend.h ../src/remote.h
+SOURCES += aircast_tests.cpp ../src/backend.cpp ../src/remote.cpp

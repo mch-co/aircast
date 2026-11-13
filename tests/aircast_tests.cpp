@@ -1,11 +1,13 @@
 #include <QProcess>
 #include <QSettings>
+#include <QSignalSpy>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QVideoSink>
 #include <QtTest>
 
 #include "backend.h"
+#include "remote.h"
 
 class AircastTests : public QObject {
     Q_OBJECT
@@ -92,6 +94,51 @@ private slots:
         QVERIFY2(command.contains("allow tcp 7000,7100 comment AirCast"), command.constData());
         QVERIFY(command.contains("ufw allow 6000,6001,7011/udp") && command.contains("ufw allow 5353/udp"));
         QSettings("aircast", "aircast").clear();
+    }
+
+    void mapsKeysToHidUsages()
+    {
+        quint8 modifier = 0;
+        QCOMPARE(Remote::hidUsage(30, &modifier), 0x04); // A
+        QCOMPARE(modifier, quint8(0));
+        QCOMPARE(Remote::hidUsage(28, &modifier), 0x28); // Enter
+        QCOMPARE(Remote::hidUsage(42, &modifier), 0);    // left Shift
+        QCOMPARE(modifier, quint8(0x02));
+        QCOMPARE(Remote::hidUsage(29, &modifier), 0);    // Ctrl goes out as Command
+        QCOMPARE(modifier, quint8(0x08));
+        QCOMPARE(Remote::hidUsage(999, &modifier), 0);
+        QCOMPARE(modifier, quint8(0));
+    }
+
+    void buildsKeyboardAndMouseReports()
+    {
+        Remote remote(nullptr, false);
+        QSignalSpy sent(&remote, &Remote::reportSent);
+        auto last = [&] { return sent.last().at(1).toByteArray().toHex(); };
+
+        remote.key(42, true);
+        remote.key(30, true);
+        QCOMPARE(last(), QByteArray("0200040000000000"));
+        remote.key(30, false);
+        remote.key(42, false);
+        QCOMPARE(last(), QByteArray("0000000000000000"));
+
+        remote.buttons(1);
+        QCOMPARE(last(), QByteArray("01000000"));
+        sent.clear();
+        remote.move(300, -2.5); // too far for one report, and half a pixel left over
+        QCOMPARE(sent.size(), 3);
+        QCOMPARE(sent.at(0).at(1).toByteArray().toHex(), QByteArray("017ffe00"));
+        QCOMPARE(last(), QByteArray("012e0000"));
+        remote.move(0, -0.5);
+        QCOMPARE(last(), QByteArray("0100ff00"));
+        remote.scroll(-1);
+        QCOMPARE(last(), QByteArray("010000ff"));
+
+        remote.key(30, true);
+        remote.releaseAll();
+        QCOMPARE(last(), QByteArray("00000000"));
+        QCOMPARE(sent.at(sent.size() - 2).at(1).toByteArray().toHex(), QByteArray("0000000000000000"));
     }
 
     void blocksIdleWhileAsked()

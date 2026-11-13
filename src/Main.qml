@@ -26,6 +26,9 @@ ApplicationWindow {
     readonly property bool full: visibility === Window.FullScreen
     readonly property bool landscape: backend.videoSize.width > backend.videoSize.height
     property bool helpVisible: false
+    // While the pointer is on the picture, the mouse and keyboard belong to
+    // the phone, so the app's own single-key shortcuts step aside.
+    readonly property bool controlling: remote.state === "connected" && control.containsMouse
     property bool expanded: true
 
     function dim(alpha) { return Qt.rgba(238 / 255, 241 / 255, 248 / 255, alpha) }
@@ -38,12 +41,12 @@ ApplicationWindow {
     // Nothing to show full screen once the phone is gone.
     onConnectedChanged: if (!connected && full) win.visibility = Window.Windowed
 
-    Shortcut { sequence: "?"; context: Qt.ApplicationShortcut; onActivated: win.helpVisible = !win.helpVisible }
-    Shortcut { sequence: "Q"; context: Qt.ApplicationShortcut; onActivated: Qt.quit() }
-    Shortcut { sequence: "Space"; context: Qt.ApplicationShortcut; onActivated: backend.visible = !backend.visible }
-    Shortcut { sequence: "F"; context: Qt.ApplicationShortcut; enabled: win.connected; onActivated: win.toggleFull() }
-    Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; onActivated: win.helpVisible ? win.helpVisible = false : win.visibility = Window.Windowed }
-    Shortcut { sequence: "D"; context: Qt.ApplicationShortcut; enabled: backend.phase !== "idle"; onActivated: backend.disconnectClient() }
+    Shortcut { sequence: "?"; context: Qt.ApplicationShortcut; enabled: !win.controlling; onActivated: win.helpVisible = !win.helpVisible }
+    Shortcut { sequence: "Q"; context: Qt.ApplicationShortcut; enabled: !win.controlling; onActivated: Qt.quit() }
+    Shortcut { sequence: "Space"; context: Qt.ApplicationShortcut; enabled: !win.controlling; onActivated: backend.visible = !backend.visible }
+    Shortcut { sequence: "F"; context: Qt.ApplicationShortcut; enabled: win.connected && !win.controlling; onActivated: win.toggleFull() }
+    Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; enabled: !win.controlling; onActivated: win.helpVisible ? win.helpVisible = false : win.visibility = Window.Windowed }
+    Shortcut { sequence: "D"; context: Qt.ApplicationShortcut; enabled: backend.phase !== "idle" && !win.controlling; onActivated: backend.disconnectClient() }
 
     component Mono: Label {
         font.family: win.mono
@@ -85,6 +88,26 @@ ApplicationWindow {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
+        }
+    }
+    component Toggle: AbstractButton {
+        id: toggleRoot
+        property bool on: false
+        implicitWidth: 38; implicitHeight: 22
+        focusPolicy: Qt.TabFocus
+        Accessible.role: Accessible.CheckBox
+        Accessible.checked: on
+        background: Rectangle {
+            radius: 11
+            color: toggleRoot.on ? win.green : Qt.rgba(1, 1, 1, .18)
+            border.width: toggleRoot.visualFocus ? 1 : 0
+            border.color: "white"
+            Behavior on color { ColorAnimation { duration: 200 } }
+            Rectangle {
+                y: 3; x: toggleRoot.on ? 19 : 3
+                width: 16; height: 16; radius: 8; color: "white"
+                Behavior on x { NumberAnimation { duration: 200 } }
+            }
         }
     }
     component Stat: Card {
@@ -171,6 +194,32 @@ ApplicationWindow {
                         Component.onCompleted: backend.videoSink = video.videoSink
                         layer.enabled: screen.corner > 0
                         layer.effect: MultiEffect { maskEnabled: true; maskSource: screenMask }
+                    }
+                    // The picture is the trackpad: movement is relative, like
+                    // any mouse, so the phone's own pointer is the one to watch.
+                    MouseArea {
+                        id: control
+                        property point last
+                        anchors.fill: parent
+                        enabled: remote.state === "connected"
+                        hoverEnabled: true
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                        cursorShape: enabled ? Qt.CrossCursor : Qt.ArrowCursor
+                        focus: containsMouse
+                        function report(mouse) {
+                            remote.buttons((mouse.buttons & Qt.LeftButton ? 1 : 0) | (mouse.buttons & Qt.RightButton ? 2 : 0) | (mouse.buttons & Qt.MiddleButton ? 4 : 0))
+                        }
+                        onEntered: { last = Qt.point(mouseX, mouseY); forceActiveFocus() }
+                        onExited: remote.releaseAll()
+                        onPositionChanged: mouse => {
+                            remote.move(mouse.x - last.x, mouse.y - last.y)
+                            last = Qt.point(mouse.x, mouse.y)
+                        }
+                        onPressed: mouse => report(mouse)
+                        onReleased: mouse => report(mouse)
+                        onWheel: wheel => remote.scroll(Math.round(wheel.angleDelta.y / 120))
+                        Keys.onPressed: event => { if (!event.isAutoRepeat) remote.key(event.nativeScanCode - 8, true); event.accepted = true }
+                        Keys.onReleased: event => { if (!event.isAutoRepeat) remote.key(event.nativeScanCode - 8, false); event.accepted = true }
                     }
                     Rectangle {
                         id: screenMask
@@ -288,27 +337,67 @@ ApplicationWindow {
                             Label { text: qsTr("Visible on the network"); font.pixelSize: 13; font.weight: Font.DemiBold; color: win.ink }
                             Mono { text: qsTr("name: %1").arg(backend.name) }
                         }
-                        AbstractButton {
-                            id: toggle
-                            implicitWidth: 38; implicitHeight: 22
-                            checkable: true
-                            checked: backend.visible
-                            focusPolicy: Qt.TabFocus
-                            Accessible.role: Accessible.CheckBox
+                        Toggle {
+                            on: backend.visible
                             Accessible.name: qsTr("Visible on the network")
                             onClicked: backend.visible = !backend.visible
-                            background: Rectangle {
-                                radius: 11
-                                color: backend.visible ? win.green : Qt.rgba(1, 1, 1, .18)
-                                border.width: toggle.visualFocus ? 1 : 0
-                                border.color: "white"
-                                Behavior on color { ColorAnimation { duration: 200 } }
-                                Rectangle {
-                                    y: 3; x: backend.visible ? 19 : 3
-                                    width: 16; height: 16; radius: 8; color: "white"
-                                    Behavior on x { NumberAnimation { duration: 200 } }
+                        }
+                    }
+                }
+
+                // Control: the computer as the phone's Bluetooth mouse and keyboard.
+                Card {
+                    Layout.fillWidth: true
+                    visible: win.expanded
+                    implicitHeight: controlCard.implicitHeight + 24
+                    ColumnLayout {
+                        id: controlCard
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+                        spacing: 10
+                        RowLayout {
+                            spacing: 12
+                            Column {
+                                Layout.fillWidth: true
+                                spacing: 2
+                                Label { text: qsTr("Control the iPhone"); font.pixelSize: 13; font.weight: Font.DemiBold; color: win.ink }
+                                Mono {
+                                    color: remote.state === "connected" ? "#9ff0c4" : win.dim(.55)
+                                    text: remote.state === "connected" ? qsTr("mouse and keyboard connected")
+                                        : remote.state === "waiting" ? qsTr("waiting for the iPhone")
+                                        : remote.state === "starting" ? qsTr("starting Bluetooth")
+                                        : qsTr("Bluetooth mouse and keyboard")
                                 }
                             }
+                            Toggle {
+                                on: remote.enabled
+                                Accessible.name: qsTr("Control the iPhone")
+                                onClicked: remote.enabled = !remote.enabled
+                            }
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            visible: remote.state === "waiting" || remote.state === "connected"
+                            wrapMode: Text.WordWrap
+                            lineHeight: 1.3
+                            font.pixelSize: 12
+                            color: win.dim(.75)
+                            text: remote.state === "waiting"
+                                ? qsTr("On the iPhone, open Settings > Bluetooth and choose “AirCast”. For a pointer, turn on Settings > Accessibility > Touch > AssistiveTouch.")
+                                : qsTr("Move the mouse over the picture to control the iPhone. Ctrl works as ⌘.")
+                        }
+                        FlatButton {
+                            Layout.fillWidth: true
+                            visible: remote.state === "connected"
+                            text: qsTr("Home")
+                            onClicked: remote.home()
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            visible: remote.error !== ""
+                            wrapMode: Text.WordWrap
+                            color: "#ffb3bd"
+                            font.pixelSize: 12
+                            text: remote.error
                         }
                     }
                 }

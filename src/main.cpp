@@ -8,6 +8,7 @@
 #include <QUrl>
 
 #include "backend.h"
+#include "remote.h"
 #include "theme.h"
 #include "translator.h"
 
@@ -29,12 +30,14 @@ int main(int argc, char *argv[]) {
     Theme theme;
     Backend backend;
     backend.setVisible(true);
+    Remote remote;
 
     QQmlApplicationEngine engine;
     QObject::connect(&translator, &Translator::changed, &engine, &QQmlEngine::retranslate);
     engine.rootContext()->setContextProperty("translator", &translator);
     engine.rootContext()->setContextProperty("theme", &theme);
     engine.rootContext()->setContextProperty("backend", &backend);
+    engine.rootContext()->setContextProperty("remote", &remote);
     engine.load(QUrl("qrc:/Main.qml"));
     if (engine.rootObjects().isEmpty())
         return 1;

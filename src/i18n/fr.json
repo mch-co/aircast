@@ -44,5 +44,15 @@
   "Not now": "Plus tard",
   "Allow AirPlay through the firewall…": "Autoriser AirPlay dans le pare-feu…",
   "The firewall was not changed: %1": "Le pare-feu n'a pas été modifié : %1",
-  "The firewall was not changed (exit code %1).": "Le pare-feu n'a pas été modifié (code %1)."
+  "The firewall was not changed (exit code %1).": "Le pare-feu n'a pas été modifié (code %1).",
+  "Control the iPhone": "Contrôler l'iPhone",
+  "mouse and keyboard connected": "souris et clavier connectés",
+  "waiting for the iPhone": "en attente de l'iPhone",
+  "starting Bluetooth": "démarrage du Bluetooth",
+  "Bluetooth mouse and keyboard": "souris et clavier Bluetooth",
+  "On the iPhone, open Settings > Bluetooth and choose “AirCast”. For a pointer, turn on Settings > Accessibility > Touch > AssistiveTouch.": "Sur l'iPhone, ouvrez Réglages > Bluetooth et choisissez « AirCast ». Pour avoir un pointeur, activez Réglages > Accessibilité > Toucher > AssistiveTouch.",
+  "Move the mouse over the picture to control the iPhone. Ctrl works as ⌘.": "Passez la souris sur l'image pour contrôler l'iPhone. Ctrl fait office de ⌘.",
+  "Home": "Accueil",
+  "Could not reach Bluetooth: %1": "Bluetooth inaccessible : %1",
+  "Bluetooth is off or can't act as a mouse and keyboard: %1": "Le Bluetooth est éteint ou ne peut pas servir de souris et clavier : %1"
 }

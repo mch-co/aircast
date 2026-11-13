@@ -32,6 +32,7 @@ the network announcement test is skipped.
 | Path | What it holds |
 | --- | --- |
 | `src/backend.{h,cpp}` | The receiver: server, video pipeline, firewall, idle lock |
+| `src/remote.{h,cpp}` | Phone control: a Bluetooth LE mouse and keyboard served through BlueZ |
 | `src/Main.qml` | The window: layout and keyboard shortcuts, no logic |
 | `src/theme.*`, `src/translator.*` | Omarchy theme and language following |
 | `src/i18n/<code>.json` | Translations, English text to translation |
