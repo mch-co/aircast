@@ -147,13 +147,15 @@ private slots:
             QProcess list;
             list.start("systemd-inhibit", {"--list", "--no-pager"});
             list.waitForFinished(5000);
-            return list.readAllStandardOutput();
+            return list.readAllStandardOutput().count("AirCast");
         };
+        // Counted, because an installed AirCast that is mirroring holds its own.
+        const int before = locks();
         Backend backend;
         backend.setIdleInhibited(true);
-        QVERIFY(locks().contains("AirCast"));
+        QCOMPARE(locks(), before + 1);
         backend.setIdleInhibited(false);
-        QVERIFY(!locks().contains("AirCast"));
+        QCOMPARE(locks(), before);
     }
 
     void announcesAndWithdraws()

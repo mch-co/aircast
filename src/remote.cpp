@@ -95,7 +95,7 @@ Remote::Remote(QObject *parent, bool useBluetooth) : QDBusVirtualObject(parent),
         {{"Type", "peripheral"},
          {"ServiceUUIDs", QStringList{uuid("1812")}},
          {"LocalName", "AirCast"},
-         {"Appearance", QVariant::fromValue<quint16>(0x03c0)}, // generic HID
+         {"Appearance", QVariant::fromValue<quint16>(0x03c1)}, // keyboard: iOS lists the input devices it recognises
          {"Discoverable", true}});
 
     if (m_useBluetooth && QSettings("aircast", "aircast").value("control").toBool())
