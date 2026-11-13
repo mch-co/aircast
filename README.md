@@ -79,7 +79,7 @@ Optional: `ufw` and `polkit` for the firewall offer, `ffmpeg` to run the tests. 
 
 ## Install
 
-One command installs the dependencies and AirCast, starts Avahi and Bluetooth, and offers the firewall and Bluetooth settings (it asks before each of those two):
+**Recommended:** one command installs the dependencies and AirCast, starts Avahi and Bluetooth, and offers the firewall and Bluetooth settings (it asks before each of those two):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/install.sh | bash
@@ -87,7 +87,7 @@ curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/insta
 
 Add `-s -- --yes` after `bash` to accept every question. Read [the script](scripts/install.sh) first if you prefer; it uses `sudo` for `pacman`, `systemctl`, `ufw` and `/etc/bluetooth/main.conf`.
 
-Or by hand:
+Or by hand, without the system settings:
 
 ```sh
 git clone https://github.com/mch-co/aircast.git
@@ -99,11 +99,13 @@ Both build the Arch package and install it with `makepkg -si`: the `aircast` com
 
 The latest release is [v0.2.0](https://github.com/mch-co/aircast/releases/tag/v0.2.0).
 
-To uninstall:
+To uninstall, one command removes AirCast and offers to undo the firewall and Bluetooth settings and to delete its own settings:
 
 ```sh
-sudo pacman -R aircast
+curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/uninstall.sh | bash
 ```
+
+The packages installed as dependencies are left in place. To remove only the app: `sudo pacman -R aircast`.
 
 ## Usage
 

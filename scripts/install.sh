@@ -90,5 +90,6 @@ cat <<'TEXT'
              Settings > Bluetooth > AirCast, and
              Settings > Accessibility > Touch > AssistiveTouch.
 
-    Uninstall with: sudo pacman -R aircast
+    Uninstall with:
+    curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/uninstall.sh | bash
 TEXT
