@@ -6,6 +6,8 @@ Mirroring > the name of this computer. The first time, the phone asks for the
 four-digit code AirCast shows.
 
 Both devices must be on the same network, and `avahi-daemon` must be running.
+H.264 and H.265 sources are decoded, and the screen stays awake while a device
+is mirroring.
 
 | Key | Action |
 | --- | --- |

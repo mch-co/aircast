@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
+import QtQuick.Effects
 import QtQuick.Shapes
 import QtMultimedia
 
@@ -25,6 +26,7 @@ ApplicationWindow {
     readonly property bool full: visibility === Window.FullScreen
     readonly property bool landscape: backend.videoSize.width > backend.videoSize.height
     property bool helpVisible: false
+    property bool expanded: true
 
     function dim(alpha) { return Qt.rgba(238 / 255, 241 / 255, 248 / 255, alpha) }
     function clock(seconds) {
@@ -144,15 +146,40 @@ ApplicationWindow {
                 }
             }
 
-            VideoOutput {
-                id: video
+            Item {
+                id: screenArea
                 anchors.fill: parent
                 anchors.margins: win.full ? 0 : 10
                 anchors.topMargin: win.full ? 0 : 40
-                fillMode: VideoOutput.PreserveAspectFit
                 visible: win.connected
-                Component.onCompleted: backend.videoSink = video.videoSink
                 TapHandler { onDoubleTapped: win.toggleFull() }
+
+                // Sized to the picture itself, so the rounded corners sit on
+                // the phone's screen and not on the letterboxing.
+                Item {
+                    id: screen
+                    readonly property real ratio: backend.videoSize.height > 0 ? backend.videoSize.width / backend.videoSize.height : 1
+                    readonly property real corner: win.full ? 0 : (win.landscape ? 18 : 26)
+                    anchors.centerIn: parent
+                    width: Math.min(parent.width, parent.height * ratio)
+                    height: width / ratio
+
+                    VideoOutput {
+                        id: video
+                        anchors.fill: parent
+                        fillMode: VideoOutput.Stretch
+                        Component.onCompleted: backend.videoSink = video.videoSink
+                        layer.enabled: screen.corner > 0
+                        layer.effect: MultiEffect { maskEnabled: true; maskSource: screenMask }
+                    }
+                    Rectangle {
+                        id: screenMask
+                        anchors.fill: parent
+                        radius: screen.corner
+                        visible: false
+                        layer.enabled: true
+                    }
+                }
             }
 
             Column {
@@ -240,10 +267,16 @@ ApplicationWindow {
                             }
                         }
                     }
+                    FlatButton {
+                        text: win.expanded ? "–" : "+"; base: "transparent"; implicitWidth: 26; implicitHeight: 26
+                        Accessible.name: win.expanded ? qsTr("Collapse the panel") : qsTr("Expand the panel")
+                        onClicked: win.expanded = !win.expanded
+                    }
                 }
 
                 Card {
                     Layout.fillWidth: true
+                    visible: win.expanded
                     implicitHeight: 60
                     RowLayout {
                         anchors.fill: parent
@@ -292,7 +325,7 @@ ApplicationWindow {
                 // Idle: how to connect.
                 Item {
                     Layout.fillWidth: true
-                    visible: backend.phase === "idle"
+                    visible: win.expanded && backend.phase === "idle"
                     implicitHeight: idleText.implicitHeight + 32
                     Shape {
                         id: dashes
@@ -351,7 +384,7 @@ ApplicationWindow {
                 // Connected: who, for how long, and the way out.
                 Card {
                     Layout.fillWidth: true
-                    visible: win.connected
+                    visible: win.expanded && win.connected
                     implicitHeight: live.implicitHeight + 24
                     color: Qt.rgba(94 / 255, 234 / 255, 160 / 255, .07)
                     border.width: 1

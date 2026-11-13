@@ -33,5 +33,7 @@
   "Could not start network discovery (error %1).": "Impossible de démarrer la découverte réseau (erreur %1).",
   "Could not start the AirPlay server.": "Impossible de démarrer le serveur AirPlay.",
   "Could not open a network port for AirPlay.": "Impossible d'ouvrir un port réseau pour AirPlay.",
-  "Could not announce this computer on the network. Is avahi-daemon running?": "Impossible d'annoncer ce PC sur le réseau. avahi-daemon est-il lancé ?"
+  "Collapse the panel": "Replier le panneau",
+  "Expand the panel": "Déplier le panneau",
+  "Could not announce this computer on the network. Is another AirPlay receiver already running here, or is avahi-daemon stopped?": "Impossible d'annoncer ce PC sur le réseau. Un autre récepteur AirPlay tourne-t-il déjà ici, ou avahi-daemon est-il arrêté ?"
 }

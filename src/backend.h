@@ -3,6 +3,7 @@
 #include <QMutex>
 #include <QObject>
 #include <QPointer>
+#include <QDBusUnixFileDescriptor>
 #include <QSize>
 #include <QTimer>
 #include <QVideoFrame>
@@ -67,6 +68,10 @@ public:
     std::atomic<int> connections{0};
     std::atomic<int> missedFeedback{0};
     std::atomic<quint64> clockOffset{0};
+    std::atomic<bool> h265{false};
+
+    // Holds a logind idle lock, so the screen doesn't lock mid-mirroring.
+    void setIdleInhibited(bool inhibited);
 
 signals:
     void changed();
@@ -84,6 +89,7 @@ private:
     QSize m_videoSize;
     QPointer<QVideoSink> m_sink;
     QTimer m_tick, m_pairingTimeout;
+    QDBusUnixFileDescriptor m_idleLock;
 
     raop_s *m_raop = nullptr;
     dnssd_s *m_dnssd = nullptr;

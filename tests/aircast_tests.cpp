@@ -23,21 +23,34 @@ private slots:
 
     // The path a phone's mirror stream takes: H.264 access units in, decoded
     // frames out on the window's video sink.
+    void decodesMirrorVideoIntoTheSink_data()
+    {
+        QTest::addColumn<QString>("encoder");
+        QTest::addColumn<QString>("format");
+        QTest::addColumn<QByteArray>("delimiter");
+        QTest::newRow("h264") << "libx264" << "h264" << QByteArray::fromHex("0000000109");
+        QTest::newRow("h265") << "libx265" << "hevc" << QByteArray::fromHex("000000014601");
+    }
+
     void decodesMirrorVideoIntoTheSink()
     {
+        QFETCH(QString, encoder);
+        QFETCH(QString, format);
+        QFETCH(QByteArray, delimiter);
         QTemporaryDir dir;
         const QString file = dir.filePath("clip.h264");
         QProcess ffmpeg;
         ffmpeg.start("ffmpeg", {"-v", "error", "-f", "lavfi", "-i", "testsrc=size=390x844:rate=30", "-frames:v", "30",
-                                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-x264-params", "aud=1:bframes=0",
-                                "-bsf:v", "h264_mp4toannexb", "-f", "h264", file});
+                                "-c:v", encoder, "-pix_fmt", "yuv420p", "-x264-params", "aud=1:bframes=0",
+                                "-x265-params", "aud=1:bframes=0:log-level=none", "-f", format, file});
         QVERIFY(ffmpeg.waitForFinished(20000));
         QFile clip(file);
         QVERIFY(clip.open(QIODevice::ReadOnly));
-        const QByteArray stream = clip.readAll(), delimiter = QByteArray::fromHex("0000000109");
+        const QByteArray stream = clip.readAll();
         QVERIFY(stream.startsWith(delimiter));
 
         Backend backend;
+        backend.h265 = format == "hevc";
         QVideoSink sink;
         backend.setVideoSink(&sink);
         int frames = 0;
@@ -54,8 +67,26 @@ private slots:
         QCOMPARE(backend.videoSize(), QSize(390, 844));
     }
 
+    void blocksIdleWhileAsked()
+    {
+        auto locks = [] {
+            QProcess list;
+            list.start("systemd-inhibit", {"--list", "--no-pager"});
+            list.waitForFinished(5000);
+            return list.readAllStandardOutput();
+        };
+        Backend backend;
+        backend.setIdleInhibited(true);
+        QVERIFY(locks().contains("AirCast"));
+        backend.setIdleInhibited(false);
+        QVERIFY(!locks().contains("AirCast"));
+    }
+
     void announcesAndWithdraws()
     {
+        // Two receivers can't announce the same identity on one machine.
+        if (QProcess::execute("pgrep", {"-x", "aircast"}) == 0)
+            QSKIP("AirCast is already running on this machine");
         Backend backend;
         backend.setVisible(true);
         QVERIFY2(backend.visible(), qPrintable(backend.error()));

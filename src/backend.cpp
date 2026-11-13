@@ -1,6 +1,9 @@
 // Receiver wiring follows UxPlay's uxplay.cpp (GPL-3.0, F. Duncanh and others).
 #include "backend.h"
 
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusReply>
 #include <QDir>
 #include <QGuiApplication>
 #include <QNetworkInterface>
@@ -84,16 +87,18 @@ double audioClientVolume(void *) { return 0.0; }
 void audioVolume(void *, float volume) { audio_renderer_set_volume(Backend::linearVolume(volume)); }
 
 void videoProcess(void *cls, raop_ntp_t *, video_decode_struct *d) {
-    if (!d->is_h265)
-        self(cls)->pushVideo(d->data, d->data_len);
+    self(cls)->pushVideo(d->data, d->data_len);
 }
 void videoRunning(void *cls, bool running) {
     if (running)
         post(self(cls), [b = self(cls)] { b->onStreaming(); });
 }
 void videoReset(void *cls, reset_type_t) { post(self(cls), [b = self(cls)] { b->resetVideo(); }); }
-// Only H.264 is advertised, so anything else is a client we can't show.
-int videoCodec(void *, video_codec_t codec) { return codec == VIDEO_CODEC_H264 ? 0 : -1; }
+// Chosen once per stream, before its first frame builds the pipeline.
+int videoCodec(void *cls, video_codec_t codec) {
+    self(cls)->h265 = codec == VIDEO_CODEC_H265;
+    return 0;
+}
 
 void nothing(void *) {}
 void noBuffer(void *, const void *, int) {}
@@ -216,11 +221,12 @@ bool Backend::start() {
         return false;
     }
     // UxPlay's feature bits 0-31: mirroring, audio and FairPlay, without
-    // HLS video, H.265 or legacy pairing.
+    // HLS video or legacy pairing; bit 42 adds H.265 for 4K sources.
     static const char features[] = "01100111011111111111111001011010";
     for (int bit = 0; bit < 32; ++bit)
         dnssd_set_airplay_features(m_dnssd, bit, features[bit] - '0');
     dnssd_set_airplay_features(m_dnssd, 27, 0);
+    dnssd_set_airplay_features(m_dnssd, 42, 1);
 
     raop_callbacks_t callbacks;
     std::memset(&callbacks, 0, sizeof(callbacks));
@@ -291,7 +297,7 @@ bool Backend::start() {
     raop_set_dnssd(m_raop, m_dnssd);
 
     if (dnssd_register_raop(m_dnssd, port) || dnssd_register_airplay(m_dnssd, port)) {
-        m_error = tr("Could not announce this computer on the network. Is avahi-daemon running?");
+        m_error = tr("Could not announce this computer on the network. Is another AirPlay receiver already running here, or is avahi-daemon stopped?");
         return false;
     }
     return true;
@@ -350,6 +356,7 @@ void Backend::setPhase(const QString &phase) {
     }
     if (phase != "pairing")
         m_pin.clear();
+    setIdleInhibited(phase == "connected");
     m_phase = phase;
     emit changed();
 }
@@ -381,6 +388,23 @@ void Backend::onConnections(int count) {
 
 void Backend::resetVideo() { destroyPipeline(); }
 
+void Backend::setIdleInhibited(bool inhibited) {
+    if (inhibited == m_idleLock.isValid())
+        return;
+    if (!inhibited) {
+        m_idleLock = QDBusUnixFileDescriptor(); // closing the descriptor releases the lock
+        return;
+    }
+    QDBusInterface logind("org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager",
+                          QDBusConnection::systemBus());
+    const QDBusReply<QDBusUnixFileDescriptor> reply =
+        logind.call("Inhibit", "idle", "AirCast", "Screen mirroring", "block");
+    if (reply.isValid())
+        m_idleLock = reply.value();
+    else
+        qWarning("airplay: could not block idle: %s", qPrintable(reply.error().message()));
+}
+
 void Backend::fail(const QString &message) {
     QMetaObject::invokeMethod(this, [this, message] {
         m_error = message;
@@ -403,12 +427,13 @@ void Backend::tick() {
 
 bool Backend::createPipeline() {
     GError *error = nullptr;
-    m_pipeline = gst_parse_launch(
+    const QByteArray codec = h265 ? "h265" : "h264";
+    const QByteArray launch =
         "appsrc name=source is-live=true format=time stream-type=0 "
-        "caps=\"video/x-h264,stream-format=(string)byte-stream,alignment=(string)au\" "
-        "! queue ! h264parse ! decodebin ! videoconvert ! video/x-raw,format=I420 "
-        "! appsink name=sink sync=false max-buffers=2 drop=true",
-        &error);
+        "caps=\"video/x-" + codec + ",stream-format=(string)byte-stream,alignment=(string)au\" "
+        "! queue ! " + codec + "parse ! decodebin ! videoconvert ! video/x-raw,format=I420 "
+        "! appsink name=sink sync=false max-buffers=2 drop=true";
+    m_pipeline = gst_parse_launch(launch.constData(), &error);
     if (!m_pipeline || error) {
         fail(tr("Video decoding failed: %1").arg(error ? QString::fromUtf8(error->message) : QString()));
         g_clear_error(&error);
