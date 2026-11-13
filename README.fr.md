@@ -79,21 +79,33 @@ Optionnel : `ufw` et `polkit` pour la proposition pare-feu, `ffmpeg` pour lancer
 
 ## Installation
 
+**Recommandé :** une seule commande installe les dépendances et AirCast, démarre Avahi et le Bluetooth, et propose les réglages du pare-feu et du Bluetooth (elle demande avant chacun des deux) :
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/install.sh | bash
+```
+
+Ajoutez `-s -- --yes` après `bash` pour tout accepter. Lisez d'abord [le script](scripts/install.sh) si vous préférez ; il utilise `sudo` pour `pacman`, `systemctl`, `ufw` et `/etc/bluetooth/main.conf`.
+
+Ou à la main, sans les réglages système :
+
 ```sh
 git clone https://github.com/mch-co/aircast.git
 cd aircast
 bin/install
 ```
 
-Cette commande compile le paquet Arch et l'installe avec `makepkg -si` : la commande `aircast`, une entrée dans le lanceur d'applications et l'icône.
+Les deux compilent le paquet Arch et l'installent avec `makepkg -si` : la commande `aircast`, une entrée dans le lanceur d'applications et l'icône.
 
 La dernière version est la [v0.2.0](https://github.com/mch-co/aircast/releases/tag/v0.2.0).
 
-Pour désinstaller :
+Pour désinstaller, une commande retire AirCast et propose d'annuler les réglages du pare-feu et du Bluetooth et de supprimer ses propres réglages :
 
 ```sh
-sudo pacman -R aircast
+curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/uninstall.sh | bash
 ```
+
+Les paquets installés comme dépendances restent en place. Pour ne retirer que l'app : `sudo pacman -R aircast`.
 
 ## Utilisation
 
