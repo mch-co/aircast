@@ -87,7 +87,7 @@ bin/install
 
 Cette commande compile le paquet Arch et l'installe avec `makepkg -si` : la commande `aircast`, une entrée dans le lanceur d'applications et l'icône.
 
-La dernière version est la [v0.1.0](https://github.com/mch-co/aircast/releases/tag/v0.1.0) (recopie seulement) ; le contrôle de l'iPhone est sur la branche `dev`.
+La dernière version est la [v0.2.0](https://github.com/mch-co/aircast/releases/tag/v0.2.0).
 
 Pour désinstaller :
 

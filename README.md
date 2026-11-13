@@ -87,7 +87,7 @@ bin/install
 
 This builds the Arch package and installs it with `makepkg -si`: the `aircast` command, an app launcher entry, and the icon.
 
-The latest release is [v0.1.0](https://github.com/mch-co/aircast/releases/tag/v0.1.0) (mirroring only); iPhone control is on the `dev` branch.
+The latest release is [v0.2.0](https://github.com/mch-co/aircast/releases/tag/v0.2.0).
 
 To uninstall:
 
