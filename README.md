@@ -79,13 +79,23 @@ Optional: `ufw` and `polkit` for the firewall offer, `ffmpeg` to run the tests. 
 
 ## Install
 
+One command installs the dependencies and AirCast, starts Avahi and Bluetooth, and offers the firewall and Bluetooth settings (it asks before each of those two):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/mch-co/aircast/master/scripts/install.sh | bash
+```
+
+Add `-s -- --yes` after `bash` to accept every question. Read [the script](scripts/install.sh) first if you prefer; it uses `sudo` for `pacman`, `systemctl`, `ufw` and `/etc/bluetooth/main.conf`.
+
+Or by hand:
+
 ```sh
 git clone https://github.com/mch-co/aircast.git
 cd aircast
 bin/install
 ```
 
-This builds the Arch package and installs it with `makepkg -si`: the `aircast` command, an app launcher entry, and the icon.
+Both build the Arch package and install it with `makepkg -si`: the `aircast` command, an app launcher entry, and the icon.
 
 The latest release is [v0.2.0](https://github.com/mch-co/aircast/releases/tag/v0.2.0).
 
