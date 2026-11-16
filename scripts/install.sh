@@ -37,7 +37,7 @@ case " ${ID:-} ${ID_LIKE:-} " in
   FAMILY=arch
   PACKAGES=(base-devel git qt6-base qt6-declarative qt6-multimedia qt6-wayland gstreamer
     gst-plugins-base gst-plugins-good gst-plugins-bad gst-libav avahi libplist openssl
-    bluez bluez-utils)
+    bluez bluez-utils polkit)
   ;;
 *" debian "* | *" ubuntu "*)
   FAMILY=debian
@@ -47,7 +47,7 @@ case " ${ID:-} ${ID_LIKE:-} " in
     qml6-module-qtquick-templates qml6-module-qtqml-workerscript qml6-module-qtmultimedia
     libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-base
     gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
-    libavahi-compat-libdnssd-dev avahi-daemon libplist-dev libssl-dev bluez)
+    libavahi-compat-libdnssd-dev avahi-daemon libplist-dev libssl-dev bluez pkexec)
   ;;
 *" fedora "* | *" rhel "*)
   FAMILY=fedora
@@ -55,7 +55,7 @@ case " ${ID:-} ${ID_LIKE:-} " in
     qt6-qtmultimedia-devel qt6-qtwayland gstreamer1-devel gstreamer1-plugins-base-devel
     gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugin-libav
     gstreamer1-plugin-openh264 mozilla-openh264
-    avahi avahi-compat-libdns_sd-devel libplist-devel openssl-devel bluez)
+    avahi avahi-compat-libdns_sd-devel libplist-devel openssl-devel bluez polkit)
   ;;
 *)
   echo "AirCast's installer knows Arch, Ubuntu/Debian and Fedora; this is ${PRETTY_NAME:-another system}." >&2
@@ -67,7 +67,9 @@ esac
 step "Installing dependencies"
 case $FAMILY in
 arch) sudo pacman -S --needed --noconfirm "${PACKAGES[@]}" ;;
-debian) sudo apt-get update && sudo apt-get install -y "${PACKAGES[@]}" ;;
+# A broken third-party repository must not stop the install; the package
+# step below fails on its own if the lists are really unusable.
+debian) sudo apt-get update || true; sudo apt-get install -y "${PACKAGES[@]}" ;;
 fedora) sudo dnf install -y "${PACKAGES[@]}" ;;
 esac
 
