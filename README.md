@@ -77,7 +77,7 @@ sudo systemctl enable --now avahi-daemon bluetooth
 
 The Ubuntu and Fedora package lists are in [scripts/install.sh](scripts/install.sh). On Fedora, H.264 comes from OpenH264, and H.265 (4K sources) needs a decoder from RPM Fusion.
 
-Optional: `ufw` and `polkit` for the in-app firewall offer (the installer also handles `firewalld`), `ffmpeg` to run the tests. Don't run another AirPlay receiver (UxPlay, for example) at the same time.
+Optional: `ufw` for the in-app firewall offer (the installer also handles `firewalld`), `ffmpeg` to run the tests. Don't run another AirPlay receiver (UxPlay, for example) at the same time.
 
 ## Install
 
